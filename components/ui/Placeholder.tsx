@@ -3,7 +3,7 @@ export function Placeholder({ children }: { children: React.ReactNode }) {
   return <span className="placeholder">[{children}]</span>;
 }
 
-/** Рендерит строку, в которой заглушки записаны как [текст], — заглушки оформляются стилем. */
+/** Рендерит строку, где заглушки записаны в квадратных скобках, и оформляет их стилем. */
 export function WithPlaceholders({ text }: { text: string }) {
   const parts = text.split(/(\[[^\]]+\])/g);
   return (

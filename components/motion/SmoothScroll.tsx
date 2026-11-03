@@ -1,23 +1,29 @@
 'use client';
 import { useEffect } from 'react';
-import Lenis from 'lenis';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MotionConfig } from 'motion/react';
 
-gsap.registerPlugin(ScrollTrigger);
-
+/** Lenis + GSAP грузятся лениво, после первой отрисовки: не тормозят старт страницы. */
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
-    lenis.on('scroll', ScrollTrigger.update);
-    const tick = (t: number) => lenis.raf(t * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
+    let cleanup = () => {};
+    let cancelled = false;
+    const start = async () => {
+      const [{ default: Lenis }, { gsap }, { ScrollTrigger }] = await Promise.all([import('lenis'), import('gsap'), import('gsap/ScrollTrigger')]);
+      if (cancelled) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: true });
+      lenis.on('scroll', ScrollTrigger.update);
+      const tick = (t: number) => lenis.raf(t * 1000);
+      gsap.ticker.add(tick);
+      gsap.ticker.lagSmoothing(0);
+      cleanup = () => { gsap.ticker.remove(tick); lenis.destroy(); };
+    };
+    const id = setTimeout(start, 500);
     return () => {
-      gsap.ticker.remove(tick);
-      lenis.destroy();
+      cancelled = true;
+      clearTimeout(id);
+      cleanup();
     };
   }, []);
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
